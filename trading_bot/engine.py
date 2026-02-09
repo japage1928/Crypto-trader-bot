@@ -83,13 +83,33 @@ class TradingEngine:
         self.loop_sleep_seconds = float(cfg["engine"]["loop_sleep_seconds"])
 
     def step(self) -> None:
+        # Non-blocking: returns immediately if no new market data is available
         print("heartbeat: engine.step entered")
-        candle = self.market.next_candle()
+        # For live feeds, check if a new completed candle is available
+        if hasattr(self.market, 'get_candles'):
+            # Use get_candles() to check for new data
+            if not hasattr(self, '_last_candle_count'):
+                self._last_candle_count = 0
+            candles = self.market.get_candles()
+            if len(candles) <= self._last_candle_count:
+                # No new candle, return immediately
+                return
+            candle = candles[-1]
+            self._last_candle_count = len(candles)
+        else:
+            # For synthetic feeds, always produce a new candle
+            candle = self.market.next_candle()
+
         if not hasattr(self, '_closes'):
-            candles = self.market.warmup(60)
+            # Warmup for indicators
+            if hasattr(self.market, 'get_candles'):
+                candles = self.market.get_candles()
+            else:
+                candles = self.market.warmup(60)
             self._closes = [c.close for c in candles]
             self._highs = [c.high for c in candles]
             self._lows = [c.low for c in candles]
+
         self._closes.append(candle.close)
         self._highs.append(candle.high)
         self._lows.append(candle.low)
