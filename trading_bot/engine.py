@@ -83,7 +83,7 @@ class TradingEngine:
         self.loop_sleep_seconds = float(cfg["engine"]["loop_sleep_seconds"])
 
     def step(self) -> None:
-        """Perform one market cycle (one iteration of the main loop)."""
+        print("heartbeat: engine.step entered")
         candle = self.market.next_candle()
         if not hasattr(self, '_closes'):
             candles = self.market.warmup(60)
